@@ -38,8 +38,11 @@ COPY packages/shared/package.json ./packages/shared/
 COPY services/api/package.json    ./services/api/
 COPY services/api/prisma          ./services/api/prisma
 
-# Install production deps only (triggers @prisma/client postinstall → generate)
+# Install production deps only
 RUN pnpm install --frozen-lockfile --prod
+
+# Generate Prisma client explicitly (postinstall alone não resolve em monorepos pnpm)
+RUN cd services/api && npx prisma generate
 
 # Copy compiled output from builder
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
