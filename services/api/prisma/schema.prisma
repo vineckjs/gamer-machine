@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  phone         String    @unique
+  balance_cents Int       @default(0)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  otp_codes OtpCode[]
+  sessions  Session[]
+  payments  Payment[]
+}
+
+model OtpCode {
+  id         String   @id @default(uuid())
+  phone      String
+  code       String
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+  user User @relation(fields: [phone], references: [phone])
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  user_id          String
+  started_at       DateTime  @default(now())
+  ended_at         DateTime?
+  duration_seconds Int?
+  cost_cents       Int?
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  user_id       String
+  amount_cents  Int
+  status        PaymentStatus @default(pending)
+  abacatepay_id String?       @unique
+  qr_code       String?       @db.Text
+  qr_code_text  String?       @db.Text
+  created_at    DateTime      @default(now())
+  user User @relation(fields: [user_id], references: [id])
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  expired
+}
