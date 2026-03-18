@@ -12,7 +12,7 @@ export default defineConfig({
         vite: {
           build: {
             outDir: 'dist-electron',
-            rollupOptions: { external: ['electron'] },
+            rollupOptions: { external: ['electron', 'bufferutil', 'utf-8-validate'] },
           },
         },
       },
@@ -21,7 +21,7 @@ export default defineConfig({
         vite: {
           build: {
             outDir: 'dist-electron',
-            rollupOptions: { external: ['electron'] },
+            rollupOptions: { external: ['electron', 'bufferutil', 'utf-8-validate'] },
           },
         },
       },

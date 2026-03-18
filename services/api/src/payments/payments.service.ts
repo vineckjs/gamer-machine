@@ -28,6 +28,7 @@ export class PaymentsService {
     return {
       payment: {
         id: payment.id,
+        abacatepay_id: payment.abacatepay_id,
         user_id: payment.user_id,
         amount_cents: payment.amount_cents,
         status: payment.status,

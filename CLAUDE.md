@@ -108,6 +108,9 @@ Import from `@gamer-machine/shared`. All API DTOs are defined there. Never dupli
 
 ## Gotchas / Critical Decisions
 
+**PostgreSQL na porta 5433 (não 5432)**
+`docker-compose.yml` mapeia `5433:5432` no host porque a porta padrão 5432 já estava ocupada por outro projeto. O `DATABASE_URL` em `.env.example` já reflete isso. Se rodar em máquina limpa onde 5432 está livre, pode reverter para `5432:5432`.
+
 **WebSocket URL hardcoded in `windowManager.ts`**
 `connectWebSocket` uses `http://localhost:3001` in both dev and prod branches (line 79). If the API moves to a different host/port in production, this must be updated manually — it does not read from env.
 

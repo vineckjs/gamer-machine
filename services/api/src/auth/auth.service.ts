@@ -19,7 +19,7 @@ export class AuthService {
     const expires_at = new Date(Date.now() + 5 * 60 * 1000);
 
     await this.prisma.otpCode.create({
-      data: { phone, code, expires_at, user: { connect: { phone } } },
+      data: { phone, code, expires_at },
     });
 
     await this.smsService.sendSms(phone, `Seu código Gamer Machine: ${code}`);
