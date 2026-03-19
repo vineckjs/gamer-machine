@@ -27,6 +27,9 @@ export default defineConfig({
       },
     ]),
   ],
+  server: {
+    open: false,
+  },
   resolve: {
     alias: { '@': resolve(__dirname, './src') },
   },
