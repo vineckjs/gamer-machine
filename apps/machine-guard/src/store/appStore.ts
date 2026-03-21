@@ -6,6 +6,7 @@ export type OverlayState = 'HIDDEN' | 'WARNING_1MIN' | 'WARNING_30SEC' | 'SESSIO
 interface UserData {
   id: string;
   phone: string;
+  name: string | null;
   balance_cents: number;
 }
 

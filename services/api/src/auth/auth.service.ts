@@ -55,6 +55,7 @@ export class AuthService {
       user: {
         id: user.id,
         phone: user.phone,
+        name: user.name ?? null,
         balance_cents: user.balance_cents,
         created_at: user.created_at.toISOString(),
       },

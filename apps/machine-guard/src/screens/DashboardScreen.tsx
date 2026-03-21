@@ -74,6 +74,9 @@ export function DashboardScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full px-8">
       <h2 className="text-3xl font-black text-neon-green mb-1">DASHBOARD</h2>
+      {user?.name && (
+        <p className="text-white text-lg font-semibold mb-1">{user.name}</p>
+      )}
       <p className="text-gray-400 mb-8">{user?.phone}</p>
 
       <div className="text-5xl font-black text-white mb-8">
