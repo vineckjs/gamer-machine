@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,12 @@ class LoginDto {
   @IsString()
   @MinLength(1)
   password!: string;
+}
+
+class UpdateUserDto {
+  @IsString()
+  @MinLength(2)
+  name!: string;
 }
 
 class AddCreditDto {
@@ -45,6 +52,12 @@ export class AdminController {
   @UseGuards(AdminJwtGuard)
   findUser(@Param('phone') phone: string) {
     return this.adminService.findUserByPhone(phone);
+  }
+
+  @Patch('users/:phone')
+  @UseGuards(AdminJwtGuard)
+  updateUser(@Param('phone') phone: string, @Body() body: UpdateUserDto) {
+    return this.adminService.updateUser(phone, body.name);
   }
 
   @Post('users/:phone/credit')

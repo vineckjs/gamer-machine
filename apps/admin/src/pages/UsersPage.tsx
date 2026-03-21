@@ -58,7 +58,10 @@ export default function UsersPage() {
             onClick={() => goToUser(user.phone)}
             className="bg-white rounded-xl shadow-sm p-4 text-left hover:bg-blue-50 transition-colors flex justify-between items-center"
           >
-            <span className="font-mono text-gray-800">{user.phone}</span>
+            <div>
+              {user.name && <p className="text-gray-900 font-semibold text-sm">{user.name}</p>}
+              <p className="font-mono text-gray-500 text-sm">{user.phone}</p>
+            </div>
             <span className="text-green-600 font-semibold">
               R$ {(user.balance_cents / 100).toFixed(2).replace('.', ',')}
             </span>

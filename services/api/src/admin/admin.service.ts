@@ -37,6 +37,12 @@ export class AdminService {
     return user;
   }
 
+  async updateUser(phone: string, name: string) {
+    const user = await this.usersService.findByPhone(phone);
+    if (!user) throw new NotFoundException(`User with phone ${phone} not found`);
+    return this.prisma.user.update({ where: { id: user.id }, data: { name } });
+  }
+
   async addCredit(phone: string, amount_cents: number) {
     const user = await this.usersService.findOrCreate(phone);
 

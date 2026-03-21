@@ -3,6 +3,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 export interface AdminUser {
   id: string;
   phone: string;
+  name: string | null;
   balance_cents: number;
   created_at: string;
 }
@@ -68,6 +69,17 @@ export async function getUser(phone: string): Promise<AdminUser> {
   if (res.status === 401) { clearToken(); throw new Error('Sessão expirada'); }
   if (res.status === 404) throw new Error('NOT_FOUND');
   if (!res.ok) throw new Error('Erro ao buscar usuário');
+  return res.json();
+}
+
+export async function updateUser(phone: string, name: string): Promise<AdminUser> {
+  const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(phone)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ name }),
+  });
+  if (res.status === 401) { clearToken(); throw new Error('Sessão expirada'); }
+  if (!res.ok) throw new Error('Erro ao salvar nome');
   return res.json();
 }
 

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AdminUser, Deposit, SessionRecord, addCredit, getDeposits, getSessions, getUser } from '../api';
+import { AdminUser, Deposit, SessionRecord, addCredit, getDeposits, getSessions, getUser, updateUser } from '../api';
 
 function fmtMoney(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -25,6 +25,11 @@ export default function UserDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
+
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [nameSuccess, setNameSuccess] = useState(false);
+
   const [amountInput, setAmountInput] = useState('10');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,12 +42,32 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     getUser(phone)
-      .then(u => { setUser(u); loadHistory(phone); })
+      .then(u => {
+        setUser(u);
+        setNameInput(u.name ?? '');
+        loadHistory(phone);
+      })
       .catch(err => {
         if (err.message === 'NOT_FOUND') setNotFound(true);
         else setError(err.message);
       });
   }, [phone]);
+
+  async function handleSaveName(e: FormEvent) {
+    e.preventDefault();
+    setSavingName(true);
+    setNameSuccess(false);
+    try {
+      const updated = await updateUser(phone, nameInput.trim());
+      setUser(updated);
+      setNotFound(false);
+      setNameSuccess(true);
+    } catch (err: any) {
+      setError(err.message ?? 'Erro ao salvar nome');
+    } finally {
+      setSavingName(false);
+    }
+  }
 
   async function handleAddCredit(e: FormEvent) {
     e.preventDefault();
@@ -66,6 +91,7 @@ export default function UserDetailPage() {
   }
 
   const balance = user?.balance_cents ?? 0;
+  const hasName = (user?.name ?? nameInput.trim()).length >= 2;
 
   return (
     <div className="min-h-screen p-6 max-w-lg mx-auto">
@@ -80,6 +106,31 @@ export default function UserDetailPage() {
         <p className="text-gray-500 text-sm mb-1">Telefone</p>
         <h2 className="text-xl font-mono font-bold mb-4">{phone}</h2>
 
+        {/* Nome */}
+        <form onSubmit={handleSaveName} className="mb-6">
+          <label className="text-sm text-gray-600 mb-1 block">Nome do cliente</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Nome completo"
+              value={nameInput}
+              onChange={e => { setNameInput(e.target.value); setNameSuccess(false); }}
+              className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={savingName || nameInput.trim().length < 2}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-lg px-4 py-2 transition-colors text-sm"
+            >
+              {savingName ? '...' : 'Salvar'}
+            </button>
+          </div>
+          {nameSuccess && <p className="text-green-600 text-xs mt-1">Nome salvo.</p>}
+          {!hasName && !notFound && (
+            <p className="text-amber-600 text-xs mt-1">Preencha o nome antes de adicionar crédito.</p>
+          )}
+        </form>
+
         <p className="text-gray-500 text-sm mb-1">Saldo atual</p>
         <p className="text-3xl font-bold text-green-600 mb-6">{fmtMoney(balance)}</p>
 
@@ -89,6 +140,7 @@ export default function UserDetailPage() {
           </p>
         )}
 
+        {/* Adicionar crédito — bloqueado sem nome */}
         <form onSubmit={handleAddCredit} className="flex flex-col gap-4">
           <div>
             <label className="text-sm text-gray-600 mb-1 block">Valor a adicionar (R$)</label>
@@ -98,15 +150,17 @@ export default function UserDetailPage() {
               step="0.01"
               value={amountInput}
               onChange={e => setAmountInput(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!hasName}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           {success && <p className="text-green-600 text-sm">{success}</p>}
           <button
             type="submit"
-            disabled={loading}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-lg px-4 py-2 transition-colors"
+            disabled={loading || !hasName}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg px-4 py-2 transition-colors"
+            title={!hasName ? 'Preencha o nome do cliente primeiro' : undefined}
           >
             {loading ? 'Adicionando...' : 'Adicionar Crédito'}
           </button>
