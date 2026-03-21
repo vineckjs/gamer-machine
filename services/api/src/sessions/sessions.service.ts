@@ -86,9 +86,9 @@ export class SessionsService {
     this.clearTimer(sessionId);
 
     const now = new Date();
-    const durationSeconds = Math.ceil((now.getTime() - session.started_at.getTime()) / 1000);
+    const durationSeconds = Math.round((now.getTime() - session.started_at.getTime()) / 1000);
     const pricePerMin = this.getPricePerMinuteCents();
-    const costCents = Math.ceil(durationSeconds / 60) * pricePerMin;
+    const costCents = Math.round((durationSeconds / 60) * pricePerMin);
 
     await this.prisma.$transaction([
       this.prisma.session.update({
