@@ -107,6 +107,16 @@ export class SessionsService {
       data: { balance_cents: 0 },
     });
 
+    const finalUser = await this.prisma.user.findUnique({
+      where: { id: session.user_id },
+      select: { balance_cents: true },
+    });
+    this.gateway.emitBalanceUpdate(session.user_id, {
+      balance_cents: finalUser!.balance_cents,
+      time_remaining_seconds: 0,
+      session_id: sessionId,
+    });
+
     this.gateway.emitWarning(session.user_id, { type: 'SESSION_ENDED' });
 
     return { session_id: sessionId, cost_cents: costCents, duration_seconds: durationSeconds };
