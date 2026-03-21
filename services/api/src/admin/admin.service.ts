@@ -112,14 +112,14 @@ export class AdminService {
       where: { source: 'pix', status: 'paid', created_at: { gte: startDate, lt: endDate } },
       select: { amount_cents: true },
     });
-    const pixRevenue = pixPayments.reduce((s, p) => s + p.amount_cents, 0);
+    const pixRevenue = pixPayments.reduce((s: number, p: { amount_cents: number }) => s + p.amount_cents, 0);
 
     const adminCredits = await this.prisma.payment.findMany({
       where: { source: 'admin', status: 'paid', created_at: { gte: startDate, lt: endDate } },
       include: { user: { select: { phone: true, name: true } } },
       orderBy: { created_at: 'asc' },
     });
-    const adminTotal = adminCredits.reduce((s, p) => s + p.amount_cents, 0);
+    const adminTotal = adminCredits.reduce((s: number, p: { amount_cents: number }) => s + p.amount_cents, 0);
 
     // Group by (user_id, ISO week) and calculate weekly excess
     const weeklyMap = new Map<string, { total: number; phone: string; name: string | null }>();
