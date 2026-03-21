@@ -66,6 +66,15 @@ export class AdminService {
     return updatedUser;
   }
 
+  async getActiveOtp(phone: string) {
+    const otp = await this.prisma.otpCode.findFirst({
+      where: { phone, used: false, expires_at: { gt: new Date() } },
+      orderBy: { created_at: 'desc' },
+    });
+    if (!otp) throw new NotFoundException('Nenhum código ativo para este telefone');
+    return { code: otp.code, expires_at: otp.expires_at.toISOString() };
+  }
+
   async getDepositHistory(phone: string) {
     const user = await this.usersService.findByPhone(phone);
     if (!user) throw new NotFoundException(`User with phone ${phone} not found`);

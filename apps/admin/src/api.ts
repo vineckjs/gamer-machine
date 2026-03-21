@@ -94,6 +94,16 @@ export async function addCredit(phone: string, amountCents: number): Promise<Adm
   return res.json();
 }
 
+export async function getActiveOtp(phone: string): Promise<{ code: string; expires_at: string }> {
+  const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(phone)}/otp`, {
+    headers: authHeaders(),
+  });
+  if (res.status === 401) { clearToken(); throw new Error('Sessão expirada'); }
+  if (res.status === 404) throw new Error('NOT_FOUND');
+  if (!res.ok) throw new Error('Erro ao buscar código');
+  return res.json();
+}
+
 export async function getDeposits(phone: string): Promise<Deposit[]> {
   const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(phone)}/deposits`, {
     headers: authHeaders(),

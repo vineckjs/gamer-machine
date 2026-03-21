@@ -66,6 +66,12 @@ export class AdminController {
     return this.adminService.addCredit(phone, body.amount_cents);
   }
 
+  @Get('users/:phone/otp')
+  @UseGuards(AdminJwtGuard)
+  getActiveOtp(@Param('phone') phone: string) {
+    return this.adminService.getActiveOtp(phone);
+  }
+
   @Get('users/:phone/deposits')
   @UseGuards(AdminJwtGuard)
   getDepositHistory(@Param('phone') phone: string) {

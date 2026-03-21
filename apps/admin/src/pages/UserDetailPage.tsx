@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AdminUser, Deposit, SessionRecord, addCredit, getDeposits, getSessions, getUser, updateUser } from '../api';
+import { AdminUser, Deposit, SessionRecord, addCredit, getActiveOtp, getDeposits, getSessions, getUser, updateUser } from '../api';
 
 function fmtMoney(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -29,6 +29,10 @@ export default function UserDetailPage() {
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [nameSuccess, setNameSuccess] = useState(false);
+
+  const [otp, setOtp] = useState<{ code: string; expires_at: string } | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
 
   const [amountInput, setAmountInput] = useState('10');
   const [loading, setLoading] = useState(false);
@@ -87,6 +91,19 @@ export default function UserDetailPage() {
       setError(err.message ?? 'Erro ao adicionar crédito');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleFetchOtp() {
+    setOtpError('');
+    setOtp(null);
+    setOtpLoading(true);
+    try {
+      setOtp(await getActiveOtp(phone));
+    } catch (err: any) {
+      setOtpError(err.message === 'NOT_FOUND' ? 'Nenhum código ativo. O cliente precisa digitar o telefone no kiosk primeiro.' : err.message);
+    } finally {
+      setOtpLoading(false);
     }
   }
 
@@ -165,6 +182,30 @@ export default function UserDetailPage() {
             {loading ? 'Adicionando...' : 'Adicionar Crédito'}
           </button>
         </form>
+      </div>
+
+      {/* Código OTP */}
+      <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
+        <h3 className="font-bold text-gray-800 mb-3">Código de Acesso (OTP)</h3>
+        <p className="text-gray-500 text-sm mb-3">
+          Use após o cliente digitar o telefone no kiosk. O código expira em 5 minutos.
+        </p>
+        <button
+          onClick={handleFetchOtp}
+          disabled={otpLoading}
+          className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
+        >
+          {otpLoading ? 'Buscando...' : 'Ver código ativo'}
+        </button>
+        {otp && (
+          <div className="mt-4 bg-indigo-50 rounded-xl p-4 text-center">
+            <p className="text-4xl font-mono font-bold tracking-widest text-indigo-700">{otp.code}</p>
+            <p className="text-xs text-gray-400 mt-2">
+              Expira às {new Date(otp.expires_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        )}
+        {otpError && <p className="text-amber-600 text-sm mt-3">{otpError}</p>}
       </div>
 
       {/* Histórico de depósitos */}
