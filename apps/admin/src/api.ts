@@ -23,6 +23,18 @@ export interface SessionRecord {
   cost_cents: number;
 }
 
+/**
+ * Normaliza um número para o formato E.164 brasileiro (+55DDNNNNNNNNN).
+ * Remove tudo que não for dígito, adiciona 55 se não tiver, adiciona +.
+ * Retorna null se o resultado tiver menos de 12 dígitos (55 + DDD + mínimo 8).
+ */
+export function formatBrazilianPhone(raw: string): string | null {
+  const digits = raw.replace(/\D/g, '');
+  const withCountry = digits.startsWith('55') ? digits : '55' + digits;
+  if (withCountry.length < 12) return null; // precisa de pelo menos 55 + DDD (2) + 8 dígitos
+  return '+' + withCountry;
+}
+
 const TOKEN_KEY = 'admin_token';
 
 export function getToken(): string | null {

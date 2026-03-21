@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AdminUser, clearToken, listUsers } from '../api';
+import { AdminUser, clearToken, formatBrazilianPhone, listUsers } from '../api';
 
 export default function UsersPage() {
   const navigate = useNavigate();
@@ -24,7 +24,8 @@ export default function UsersPage() {
   const filteredUsers = users.filter(u =>
     u.phone.includes(filter) || (u.name ?? '').toLowerCase().includes(filter.toLowerCase())
   );
-  const showNewPhone = filter.length >= 8 && filteredUsers.length === 0;
+  const formattedNewPhone = formatBrazilianPhone(filter);
+  const showNewPhone = !!formattedNewPhone && filteredUsers.length === 0;
 
   function goToUser(phone: string) {
     navigate('/users/' + encodeURIComponent(phone));
@@ -72,11 +73,11 @@ export default function UsersPage() {
 
         {showNewPhone && (
           <button
-            onClick={() => goToUser(filter)}
+            onClick={() => goToUser(formattedNewPhone!)}
             className="bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl p-4 text-left hover:bg-blue-100 transition-colors"
           >
             <span className="text-blue-600 font-semibold">+ Novo telefone: </span>
-            <span className="font-mono text-blue-800">{filter}</span>
+            <span className="font-mono text-blue-800">{formattedNewPhone}</span>
           </button>
         )}
 
