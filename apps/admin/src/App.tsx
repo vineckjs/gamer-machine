@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
 import UserDetailPage from './pages/UserDetailPage';
+import FinanceiroPage from './pages/FinanceiroPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
         <Route path="/users/:phone" element={<ProtectedRoute><UserDetailPage /></ProtectedRoute>} />
+        <Route path="/financeiro" element={<ProtectedRoute><FinanceiroPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

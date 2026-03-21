@@ -125,6 +125,39 @@ export async function getDeposits(phone: string): Promise<Deposit[]> {
   return res.json();
 }
 
+export interface ExcessDetail {
+  user_phone: string;
+  user_name: string | null;
+  semana: string;
+  total_cents: number;
+  bonus_cents: number;
+  excesso_cents: number;
+}
+
+export interface MonthlyReport {
+  month: string;
+  pix_revenue_cents: number;
+  admin_total_cents: number;
+  admin_bonus_cents: number;
+  admin_excess_cents: number;
+  distribuicao: {
+    manutencao_cents: number;
+    barbearia_cents: number;
+    vinicius_cents: number;
+    marcos_cents: number;
+  };
+  excess_details: ExcessDetail[];
+}
+
+export async function getMonthlyReport(month: string): Promise<MonthlyReport> {
+  const res = await fetch(`${API_URL}/admin/financeiro/mensal?month=${encodeURIComponent(month)}`, {
+    headers: authHeaders(),
+  });
+  if (res.status === 401) { clearToken(); throw new Error('Sessão expirada'); }
+  if (!res.ok) throw new Error('Erro ao buscar relatório');
+  return res.json();
+}
+
 export async function getSessions(phone: string): Promise<SessionRecord[]> {
   const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(phone)}/sessions`, {
     headers: authHeaders(),

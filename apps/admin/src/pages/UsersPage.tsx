@@ -35,12 +35,20 @@ export default function UsersPage() {
     <div className="min-h-screen p-6 max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Usuários</h1>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-gray-500 hover:text-red-500 transition-colors"
-        >
-          Sair
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/financeiro')}
+            className="text-sm text-blue-600 hover:text-blue-800 transition-colors font-medium"
+          >
+            Financeiro
+          </button>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+          >
+            Sair
+          </button>
+        </div>
       </div>
 
       <input

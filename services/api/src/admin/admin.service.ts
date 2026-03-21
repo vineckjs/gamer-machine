@@ -102,4 +102,87 @@ export class AdminService {
       select: { id: true, started_at: true, ended_at: true, duration_seconds: true, cost_cents: true },
     });
   }
+
+  async getMonthlyReport(month: string) {
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, monthNum - 1, 1));
+    const endDate = new Date(Date.UTC(year, monthNum, 1));
+
+    const pixPayments = await this.prisma.payment.findMany({
+      where: { source: 'pix', status: 'paid', created_at: { gte: startDate, lt: endDate } },
+      select: { amount_cents: true },
+    });
+    const pixRevenue = pixPayments.reduce((s, p) => s + p.amount_cents, 0);
+
+    const adminCredits = await this.prisma.payment.findMany({
+      where: { source: 'admin', status: 'paid', created_at: { gte: startDate, lt: endDate } },
+      include: { user: { select: { phone: true, name: true } } },
+      orderBy: { created_at: 'asc' },
+    });
+    const adminTotal = adminCredits.reduce((s, p) => s + p.amount_cents, 0);
+
+    // Group by (user_id, ISO week) and calculate weekly excess
+    const weeklyMap = new Map<string, { total: number; phone: string; name: string | null }>();
+    for (const credit of adminCredits) {
+      const key = `${credit.user_id}::${getISOWeekKey(credit.created_at)}`;
+      const existing = weeklyMap.get(key);
+      if (existing) {
+        existing.total += credit.amount_cents;
+      } else {
+        weeklyMap.set(key, {
+          total: credit.amount_cents,
+          phone: credit.user.phone,
+          name: credit.user.name,
+        });
+      }
+    }
+
+    const WEEKLY_BONUS_LIMIT = 1000; // R$10
+    let adminExcess = 0;
+    const excessDetails: {
+      user_phone: string; user_name: string | null;
+      semana: string; total_cents: number; bonus_cents: number; excesso_cents: number;
+    }[] = [];
+
+    for (const [key, data] of weeklyMap) {
+      const semana = key.split('::')[1];
+      const excesso = Math.max(0, data.total - WEEKLY_BONUS_LIMIT);
+      if (excesso > 0) {
+        adminExcess += excesso;
+        excessDetails.push({
+          user_phone: data.phone,
+          user_name: data.name,
+          semana,
+          total_cents: data.total,
+          bonus_cents: WEEKLY_BONUS_LIMIT,
+          excesso_cents: excesso,
+        });
+      }
+    }
+    excessDetails.sort((a, b) => a.semana.localeCompare(b.semana));
+
+    const manutencao = Math.round(pixRevenue * 0.20);
+    const barbearia = Math.max(0, Math.round(pixRevenue * 0.20) - adminExcess);
+    const vinicius = Math.round(pixRevenue * 0.30);
+    const marcos = Math.round(pixRevenue * 0.30);
+
+    return {
+      month,
+      pix_revenue_cents: pixRevenue,
+      admin_total_cents: adminTotal,
+      admin_bonus_cents: adminTotal - adminExcess,
+      admin_excess_cents: adminExcess,
+      distribuicao: { manutencao_cents: manutencao, barbearia_cents: barbearia, vinicius_cents: vinicius, marcos_cents: marcos },
+      excess_details: excessDetails,
+    };
+  }
+}
+
+function getISOWeekKey(date: Date): string {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }

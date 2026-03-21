@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { IsNumber, IsPositive, IsString, MinLength } from 'class-validator';
@@ -82,5 +83,11 @@ export class AdminController {
   @UseGuards(AdminJwtGuard)
   getUsageHistory(@Param('phone') phone: string) {
     return this.adminService.getUsageHistory(phone);
+  }
+
+  @Get('financeiro/mensal')
+  @UseGuards(AdminJwtGuard)
+  getMonthlyReport(@Query('month') month: string) {
+    return this.adminService.getMonthlyReport(month);
   }
 }
