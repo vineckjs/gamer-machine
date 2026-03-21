@@ -21,7 +21,9 @@ export default function UsersPage() {
     navigate('/login');
   }
 
-  const filteredUsers = users.filter(u => u.phone.includes(filter));
+  const filteredUsers = users.filter(u =>
+    u.phone.includes(filter) || (u.name ?? '').toLowerCase().includes(filter.toLowerCase())
+  );
   const showNewPhone = filter.length >= 8 && filteredUsers.length === 0;
 
   function goToUser(phone: string) {
@@ -42,7 +44,7 @@ export default function UsersPage() {
 
       <input
         type="text"
-        placeholder="Filtrar por telefone..."
+        placeholder="Filtrar por nome ou telefone..."
         value={filter}
         onChange={e => setFilter(e.target.value)}
         className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
