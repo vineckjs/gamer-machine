@@ -17,7 +17,7 @@ beforeEach(() => {
 describe('appStore', () => {
   describe('setAuth', () => {
     it('sets accessToken, user, and transitions screen to DASHBOARD', () => {
-      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500 };
+      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
       useAppStore.getState().setAuth('jwt-token', user);
 
       const state = useAppStore.getState();
@@ -29,7 +29,7 @@ describe('appStore', () => {
 
   describe('updateBalance', () => {
     it('updates balance_cents on user and sets timeRemainingSeconds', () => {
-      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500 };
+      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
       useAppStore.setState({ user });
 
       useAppStore.getState().updateBalance(300, 90);
@@ -50,7 +50,7 @@ describe('appStore', () => {
 
   describe('setBalance', () => {
     it('updates only balance_cents without touching timeRemainingSeconds', () => {
-      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500 };
+      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
       useAppStore.setState({ user, timeRemainingSeconds: 120 });
 
       useAppStore.getState().setBalance(1000);
@@ -85,7 +85,7 @@ describe('appStore', () => {
         screen: 'PLAYING',
         phone: '11999999999',
         accessToken: 'jwt-token',
-        user: { id: 'user-1', phone: '11999999999', balance_cents: 500 },
+        user: { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false },
         sessionId: 'session-1',
         overlayState: 'WARNING_30SEC',
         timeRemainingSeconds: 45,

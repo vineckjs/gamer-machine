@@ -4,6 +4,7 @@ import { PhoneInputScreen } from './PhoneInputScreen';
 import { OtpInputScreen } from './OtpInputScreen';
 import { DashboardScreen } from './DashboardScreen';
 import { PlayingScreen } from './PlayingScreen';
+import { ProfileScreen } from './ProfileScreen';
 
 export function KioskApp() {
   const { screen, setOverlayState, clearSession, updateBalance } = useAppStore();
@@ -38,6 +39,7 @@ export function KioskApp() {
       {screen === 'OTP_INPUT' && <OtpInputScreen />}
       {screen === 'DASHBOARD' && <DashboardScreen />}
       {screen === 'PLAYING' && <PlayingScreen />}
+      {screen === 'PROFILE' && <ProfileScreen />}
     </div>
   );
 }

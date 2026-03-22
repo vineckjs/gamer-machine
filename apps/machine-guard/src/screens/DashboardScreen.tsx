@@ -14,6 +14,7 @@ const TOP_UP_OPTIONS = [
 
 export function DashboardScreen() {
   const { user, accessToken, setScreen, setSessionId, setBalance, logout } = useAppStore();
+  const profileIncomplete = !user?.profile_locked;
   const [qrData, setQrData] = useState<{ qrCodeText: string; amountCents: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,12 +74,23 @@ export function DashboardScreen() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-8 relative">
-      <button
-        onClick={logout}
-        className="absolute top-4 right-4 px-3 py-1 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-      >
-        Sair
-      </button>
+      <div className="absolute top-4 right-4 flex items-center gap-3">
+        <button
+          onClick={() => setScreen('PROFILE')}
+          className="relative px-3 py-1 text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          Perfil
+          {profileIncomplete && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-400" />
+          )}
+        </button>
+        <button
+          onClick={logout}
+          className="px-3 py-1 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          Sair
+        </button>
+      </div>
       <h2 className="text-3xl font-black text-neon-green mb-1">DASHBOARD</h2>
       {user?.name && (
         <p className="text-white text-lg font-semibold mb-1">{user.name}</p>
