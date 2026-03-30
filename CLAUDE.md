@@ -52,7 +52,7 @@ services/api/           — NestJS REST + WebSocket API
 packages/shared/        — Shared TypeScript types (@gamer-machine/shared)
 ```
 
-**Stack**: PostgreSQL 16 (Docker) · Prisma ORM · JWT auth · Socket.io · AWS SNS (SMS) · AbacatePay (PIX)
+**Stack**: PostgreSQL 16 (Docker) · Prisma ORM · JWT auth · Socket.io · AbacatePay (PIX) · Nodemailer (email)
 
 ### Electron — Two Processes
 1. **Kiosk window** (`kioskWindow`): fullscreen, kiosk mode, keyboard locked. Hosts the main React app (auth + dashboard screens).
@@ -78,8 +78,8 @@ The WebSocket client for **session events** lives in the **main process** (`Wind
 ## Key Conventions
 
 ### Database
-- Column names: `snake_case` (e.g., `user_id`, `started_at`, `balance_cents`)
-- Monetary values: integer cents (e.g., `balance_cents`, `cost_cents`, `amount_cents`)
+- Column names: `snake_case` (e.g., `user_id`, `started_at`, `balance_seconds`)
+- Saldo do usuário em segundos inteiros (`balance_seconds`). Valores monetários em cents inteiros (`amount_cents`, `cost_cents`)
 - No `updatedAt` trigger on `Session` or `Payment` — only `User` has `updated_at`
 
 ### NestJS
@@ -94,24 +94,24 @@ overlayState: 'HIDDEN' | 'WARNING_1MIN' | 'WARNING_30SEC' | 'SESSION_ENDED'
 ```
 Actions: `setAuth`, `setScreen`, `updateBalance`, `setBalance`, `setSessionId`, `setOverlayState`, `clearSession`, `logout`
 
-- `updateBalance(balance_cents, timeRemainingSeconds)` — used by session timer events (also updates `timeRemainingSeconds`)
-- `setBalance(balance_cents)` — used by payment confirmations (balance only, no session state)
+- `updateBalance(balance_seconds, timeRemainingSeconds)` — used by session timer events (also updates `timeRemainingSeconds`)
+- `setBalance(balance_seconds)` — used by payment confirmations (balance only, no session state)
 
 ### IPC Channels (Electron Main ↔ Renderer)
 | Channel | Direction | Description |
 |---|---|---|
 | `session:start` | invoke | Start session, returns `{ sessionId }` |
 | `session:end` | invoke | End session early |
-| `balance_update` | event → renderer | `{ balance_cents, time_remaining_seconds, session_id }` |
+| `balance_update` | event → renderer | `{ balance_seconds, time_remaining_seconds, session_id }` |
 | `warning` | event → renderer | `{ type: 'WARNING_1MIN' \| 'WARNING_30SEC' \| 'SESSION_ENDED' }` |
 | `session_ended` | event → renderer | Sent to kiosk window when locking |
 
 ### WebSocket Events (API → Renderer, Socket.io `/sessions`)
 | Event | Payload | Listener |
 |---|---|---|
-| `balance_update` | `{ balance_cents, time_remaining_seconds, session_id }` | `WindowManager` → IPC → `KioskApp` |
+| `balance_update` | `{ balance_seconds, time_remaining_seconds, session_id }` | `WindowManager` → IPC → `KioskApp` |
 | `warning` | `{ type: 'WARNING_1MIN' \| 'WARNING_30SEC' \| 'SESSION_ENDED' }` | `WindowManager` → IPC → `KioskApp` |
-| `payment_confirmed` | `{ balance_cents }` | `DashboardScreen` (direct socket.io in renderer) |
+| `payment_confirmed` | `{ balance_seconds }` | `DashboardScreen` (direct socket.io in renderer) |
 
 ### Shared Types
 Import from `@gamer-machine/shared`. All API DTOs are defined there. Never duplicate type definitions across packages.
@@ -129,8 +129,8 @@ Import from `@gamer-machine/shared`. All API DTOs are defined there. Never dupli
 **Timer uses `started_at`, not in-memory state**
 `scheduleTimer` receives `session.started_at` from the DB and calculates elapsed time via `Date.now() - startedAt.getTime()`. This survives API restarts correctly, but timers are not persisted — an API restart loses all active timers.
 
-**SMS mock — automatic**
-`SmsService` checks for `AWS_ACCESS_KEY_ID` at construction. If absent, all OTP sends log to console (`[SMS MOCK]`) instead of hitting SNS. No env var or flag needed to enable mock mode.
+**SMS — sempre em modo mock**
+`SmsService` verifica `AWS_ACCESS_KEY_ID` na construção. Como as credenciais AWS não estão configuradas, todos os envios de OTP são logados no console (`[SMS MOCK]`). Para habilitar SMS real via AWS SNS, adicione `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_REGION` ao `.env`.
 
 **PIX mock — automatic**
 `AbacatePayClient` checks for `ABACATEPAY_API_KEY`. If absent, returns a fake `brCode` and a 1×1 PNG base64 as `brCodeBase64`. If present, calls the real AbacatePay API — the response returns a payment URL (not a raw PIX brCode), so `brCodeBase64` will be empty and `qr_code_text` will be the payment page URL. The `QrCodeModal` generates the QR from `qr_code_text` either way via `qrcode.react`.
@@ -141,8 +141,8 @@ Import from `@gamer-machine/shared`. All API DTOs are defined there. Never dupli
 **Overlay window type**
 Uses `type: 'toolbar'` (not `'screen-saver'`) and `focusable: false` + `setIgnoreMouseEvents(true)`. This keeps it on top of fullscreen games on Windows without stealing focus or mouse input.
 
-**Cost calculation rounds up to nearest minute**
-`endSession` uses `Math.ceil(durationSeconds / 60) * pricePerMinCents`. A 1-second session costs the same as a 60-second session.
+**Cobrança por segundo, não por minuto**
+`endSession` debita exatamente `durationSeconds` do `balance_seconds` do usuário (sem arredondamento). `cost_cents` é sempre 0 no registro da sessão — o "custo" é o tempo consumido do saldo.
 
 ---
 
@@ -152,14 +152,15 @@ Uses `type: 'toolbar'` (not `'screen-saver'`) and `focusable: false` + `setIgnor
 - Monorepo scaffold (pnpm, Turbo, tsconfig.base)
 - Docker Compose for PostgreSQL
 - Prisma schema + PrismaModule
-- NestJS API: auth (OTP + JWT), users, sessions (timer + WebSocket), payments (PIX + webhook)
-- Electron app: kiosk window, overlay window, shortcut blocker, IPC bridge
-- React screens: PhoneInput, OtpInput, Dashboard, Playing, Overlay
+- NestJS API: auth (OTP + JWT), users (perfil, CPF, email verificado), sessions (timer + WebSocket), payments (PIX + webhook)
+- Electron app: kiosk window, overlay window, shortcut blocker, Task Manager bloqueado via registry (UAC), IPC bridge
+- React screens: PhoneInput, OtpInput, Dashboard, Playing, Overlay, Profile
 - Zustand store + Socket.io integration in renderer
 - Shared types package
+- Admin panel: gerenciamento de usuários, crédito em minutos, bônus barbearia, relatório financeiro mensal
+- Electron packaging via `electron-builder` (gera instalador NSIS para Windows)
+- Testes automatizados: 129 testes em `services/api` (Jest, ~84% de cobertura)
 
 ### Pending / Not Yet Done
 - ESLint config not set up in any package
-- Electron packaging (`electron-builder`) not configured
-- No automated tests
 - No production environment config (process manager, SSL, etc.)
