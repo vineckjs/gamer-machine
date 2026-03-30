@@ -74,7 +74,7 @@ export default function UsersPage() {
               <p className="font-mono text-gray-500 text-sm">{user.phone}</p>
             </div>
             <span className="text-green-600 font-semibold">
-              R$ {(user.balance_cents / 100).toFixed(2).replace('.', ',')}
+              {Math.floor(user.balance_seconds / 60)} min
             </span>
           </button>
         ))}

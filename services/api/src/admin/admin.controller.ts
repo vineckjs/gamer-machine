@@ -8,7 +8,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { IsNumber, IsPositive, IsString, MinLength } from 'class-validator';
+import { IsInt, IsPositive, IsString, MinLength } from 'class-validator';
 import { AdminService } from './admin.service';
 import { AdminJwtGuard } from './admin-jwt.guard';
 
@@ -29,9 +29,9 @@ class UpdateUserDto {
 }
 
 class AddCreditDto {
-  @IsNumber()
+  @IsInt()
   @IsPositive()
-  amount_cents!: number;
+  balance_seconds!: number;
 }
 
 @Controller('admin')
@@ -64,7 +64,13 @@ export class AdminController {
   @Post('users/:phone/credit')
   @UseGuards(AdminJwtGuard)
   addCredit(@Param('phone') phone: string, @Body() body: AddCreditDto) {
-    return this.adminService.addCredit(phone, body.amount_cents);
+    return this.adminService.addCredit(phone, body.balance_seconds);
+  }
+
+  @Post('users/:phone/barbershop-bonus')
+  @UseGuards(AdminJwtGuard)
+  grantBarbershopBonus(@Param('phone') phone: string) {
+    return this.adminService.grantBarbershopBonus(phone);
   }
 
   @Get('users/:phone/otp')

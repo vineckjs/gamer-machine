@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AbacatePayClient } from './abacatepay.client';
 import { SessionsGateway } from '../sessions/sessions.gateway';
+import { PACKAGES } from '@gamer-machine/shared';
 
 @Injectable()
 export class PaymentsService {
@@ -13,14 +14,18 @@ export class PaymentsService {
     private gateway: SessionsGateway,
   ) {}
 
-  async createPix(userId: string, amountCents: number) {
+  async createPix(userId: string, packageId: string) {
+    const pkg = PACKAGES.find((p) => p.id === packageId);
+    if (!pkg) throw new BadRequestException(`Pacote inválido: ${packageId}`);
+
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    const pixData = await this.abacatePay.createPixBilling(amountCents, user.phone);
+    const pixData = await this.abacatePay.createPixBilling(pkg.price_cents, user.phone);
 
     const payment = await this.prisma.payment.create({
       data: {
         user_id: userId,
-        amount_cents: amountCents,
+        amount_cents: pkg.price_cents,
+        balance_seconds: pkg.balance_seconds,
         source: 'pix',
         abacatepay_id: pixData.id,
         qr_code: pixData.brCodeBase64,
@@ -34,6 +39,7 @@ export class PaymentsService {
         abacatepay_id: payment.abacatepay_id,
         user_id: payment.user_id,
         amount_cents: payment.amount_cents,
+        balance_seconds: payment.balance_seconds,
         status: payment.status,
         qr_code: payment.qr_code,
         qr_code_text: payment.qr_code_text,
@@ -57,6 +63,8 @@ export class PaymentsService {
       return { received: true };
     }
 
+    const secondsToAdd = payment.balance_seconds ?? payment.amount_cents;
+
     await this.prisma.$transaction([
       this.prisma.payment.update({
         where: { id: payment.id },
@@ -64,14 +72,14 @@ export class PaymentsService {
       }),
       this.prisma.user.update({
         where: { id: payment.user_id },
-        data: { balance_cents: { increment: payment.amount_cents } },
+        data: { balance_seconds: { increment: secondsToAdd } },
       }),
     ]);
 
     const updatedUser = await this.prisma.user.findUnique({ where: { id: payment.user_id } });
-    this.gateway.emitPaymentConfirmed(payment.user_id, updatedUser!.balance_cents);
+    this.gateway.emitPaymentConfirmed(payment.user_id, updatedUser!.balance_seconds);
 
-    this.logger.log(`Payment ${payment.id} confirmed, added ${payment.amount_cents} cents to user ${payment.user_id}`);
+    this.logger.log(`Payment ${payment.id} confirmed, added ${secondsToAdd}s to user ${payment.user_id}`);
     return { received: true };
   }
 }

@@ -14,24 +14,17 @@ export class SessionsService {
     private gateway: SessionsGateway,
   ) {}
 
-  private getPricePerMinuteCents(): number {
-    return parseInt(process.env.PRICE_PER_MINUTE_CENTS ?? '200');
-  }
-
   async startSession(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-    if (user.balance_cents <= 0) throw new BadRequestException('Insufficient balance');
+    if (user.balance_seconds <= 0) throw new BadRequestException('Insufficient balance');
 
     const session = await this.prisma.session.create({
       data: { user_id: userId },
     });
 
-    const pricePerMin = this.getPricePerMinuteCents();
-    const time_remaining_seconds = Math.floor((user.balance_cents / pricePerMin) * 60);
-
     this.scheduleTimer(session.id, userId, session.started_at);
-    return { session, balance_cents: user.balance_cents, time_remaining_seconds };
+    return { session, balance_seconds: user.balance_seconds, time_remaining_seconds: user.balance_seconds };
   }
 
   private scheduleTimer(sessionId: string, userId: string, startedAt: Date) {
@@ -42,13 +35,11 @@ export class SessionsService {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user) { this.clearTimer(sessionId); return; }
 
-        const pricePerMin = this.getPricePerMinuteCents();
         const elapsedSeconds = (Date.now() - startedAt.getTime()) / 1000;
-        const maxSeconds = (user.balance_cents / pricePerMin) * 60;
-        const timeRemaining = Math.max(0, maxSeconds - elapsedSeconds);
+        const timeRemaining = Math.max(0, user.balance_seconds - elapsedSeconds);
 
         this.gateway.emitBalanceUpdate(userId, {
-          balance_cents: user.balance_cents,
+          balance_seconds: user.balance_seconds,
           time_remaining_seconds: Math.floor(timeRemaining),
           session_id: sessionId,
         });
@@ -87,39 +78,37 @@ export class SessionsService {
 
     const now = new Date();
     const durationSeconds = Math.round((now.getTime() - session.started_at.getTime()) / 1000);
-    const pricePerMin = this.getPricePerMinuteCents();
-    const costCents = Math.round((durationSeconds / 60) * pricePerMin);
 
     await this.prisma.$transaction([
       this.prisma.session.update({
         where: { id: sessionId },
-        data: { ended_at: now, duration_seconds: durationSeconds, cost_cents: costCents },
+        data: { ended_at: now, duration_seconds: durationSeconds, cost_cents: 0 },
       }),
       this.prisma.user.update({
         where: { id: session.user_id },
-        data: { balance_cents: { decrement: costCents } },
+        data: { balance_seconds: { decrement: durationSeconds } },
       }),
     ]);
 
     // Ensure balance doesn't go below 0
     await this.prisma.user.updateMany({
-      where: { id: session.user_id, balance_cents: { lt: 0 } },
-      data: { balance_cents: 0 },
+      where: { id: session.user_id, balance_seconds: { lt: 0 } },
+      data: { balance_seconds: 0 },
     });
 
     const finalUser = await this.prisma.user.findUnique({
       where: { id: session.user_id },
-      select: { balance_cents: true },
+      select: { balance_seconds: true },
     });
     this.gateway.emitBalanceUpdate(session.user_id, {
-      balance_cents: finalUser!.balance_cents,
+      balance_seconds: finalUser!.balance_seconds,
       time_remaining_seconds: 0,
       session_id: sessionId,
     });
 
     this.gateway.emitWarning(session.user_id, { type: 'SESSION_ENDED' });
 
-    return { session_id: sessionId, cost_cents: costCents, duration_seconds: durationSeconds };
+    return { session_id: sessionId, cost_cents: 0, duration_seconds: durationSeconds };
   }
 
   private clearTimer(sessionId: string) {

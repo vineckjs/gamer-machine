@@ -7,7 +7,7 @@ interface UserData {
   id: string;
   phone: string;
   name: string | null;
-  balance_cents: number;
+  balance_seconds: number;
   email: string | null;
   cpf: string | null;
   email_verified: boolean;
@@ -26,8 +26,8 @@ interface AppState {
   setPhone: (phone: string) => void;
   setAuth: (token: string, user: UserData) => void;
   setScreen: (screen: Screen) => void;
-  updateBalance: (balance_cents: number, timeRemaining: number) => void;
-  setBalance: (balance_cents: number) => void;
+  updateBalance: (balance_seconds: number, timeRemaining: number) => void;
+  setBalance: (balance_seconds: number) => void;
   setSessionId: (id: string | null) => void;
   setOverlayState: (state: OverlayState) => void;
   updateUser: (data: Partial<UserData>) => void;
@@ -47,10 +47,10 @@ export const useAppStore = create<AppState>((set) => ({
   setPhone: (phone) => set({ phone }),
   setAuth: (accessToken, user) => set({ accessToken, user, screen: 'DASHBOARD' }),
   setScreen: (screen) => set({ screen }),
-  updateBalance: (balance_cents, timeRemainingSeconds) =>
-    set((s) => ({ user: s.user ? { ...s.user, balance_cents } : null, timeRemainingSeconds })),
-  setBalance: (balance_cents) =>
-    set((s) => ({ user: s.user ? { ...s.user, balance_cents } : null })),
+  updateBalance: (balance_seconds, timeRemainingSeconds) =>
+    set((s) => ({ user: s.user ? { ...s.user, balance_seconds } : null, timeRemainingSeconds })),
+  setBalance: (balance_seconds) =>
+    set((s) => ({ user: s.user ? { ...s.user, balance_seconds } : null })),
   setSessionId: (sessionId) => set({ sessionId }),
   setOverlayState: (overlayState) => set({ overlayState }),
   updateUser: (data) =>

@@ -91,9 +91,9 @@ export function ProfileScreen() {
       updateUser({
         email_verified: data.email_verified,
         profile_locked: data.profile_locked,
-        balance_cents: data.balance_cents,
+        balance_seconds: data.balance_seconds,
       });
-      setBalance(data.balance_cents);
+      setBalance(data.balance_seconds);
       setStage('complete');
     } catch (e: any) {
       setError(e.message ?? 'Código inválido');
@@ -113,7 +113,7 @@ export function ProfileScreen() {
       <div className="flex flex-col items-center justify-center h-full px-8">
         <button
           onClick={() => setStage('editing')}
-          className="absolute top-4 left-4 text-gray-500 hover:text-gray-300 text-sm"
+          className="absolute top-4 left-4 px-4 py-2 text-sm font-semibold text-gray-200 border border-gray-600 rounded-lg bg-gray-900/60 hover:border-gray-400 hover:text-white transition-all"
         >
           ← Voltar
         </button>
@@ -166,7 +166,7 @@ export function ProfileScreen() {
           {bonusGranted ? 'Perfil Verificado!' : 'Email Confirmado!'}
         </h2>
         {bonusGranted && (
-          <p className="text-white text-lg mb-2">R$10 adicionados ao seu saldo!</p>
+          <p className="text-white text-lg mb-2">5 minutos adicionados ao seu saldo!</p>
         )}
         <p className="text-gray-400 mb-8">
           Seus dados estão salvos e o perfil está bloqueado.<br />
@@ -189,7 +189,7 @@ export function ProfileScreen() {
     <div className="flex flex-col items-center justify-center h-full px-8">
       <button
         onClick={() => setScreen('DASHBOARD')}
-        className="absolute top-4 left-4 text-gray-500 hover:text-gray-300 text-sm"
+        className="absolute top-4 left-4 px-4 py-2 text-sm font-semibold text-gray-200 border border-gray-600 rounded-lg bg-gray-900/60 hover:border-gray-400 hover:text-white transition-all"
       >
         ← Voltar
       </button>
@@ -204,7 +204,7 @@ export function ProfileScreen() {
 
       {!isLocked && (
         <p className="text-gray-400 text-sm mb-6 text-center">
-          Complete seu perfil e ganhe <span className="text-neon-green font-bold">R$10</span> de bônus!
+          Complete seu perfil e ganhe <span className="text-neon-green font-bold">5 minutos</span> de bônus!
         </p>
       )}
 

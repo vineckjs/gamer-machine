@@ -1,5 +1,5 @@
 export interface BalanceUpdatePayload {
-  balance_cents: number;
+  balance_seconds: number;
   time_remaining_seconds: number;
   session_id: string;
 }

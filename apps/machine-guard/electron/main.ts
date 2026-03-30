@@ -143,7 +143,7 @@ ipcMain.handle('session:start', async (_event, token: string) => {
     const data = await res.json() as any;
     if (!res.ok) throw new Error(data.message ?? 'Failed to start session');
 
-    windowManager.unlockKiosk(token, data.session.id, data.balance_cents, data.time_remaining_seconds);
+    windowManager.unlockKiosk(token, data.session.id, data.balance_seconds, data.time_remaining_seconds);
     return { sessionId: data.session.id };
   } catch (err: any) {
     throw new Error(err.message ?? 'Failed to start session');

@@ -10,7 +10,7 @@ export class WindowManager {
   private wsClient: Socket | null = null;
   private currentToken: string | null = null;
   private currentSessionId: string | null = null;
-  private currentBalanceCents: number = 0;
+  private currentBalanceSeconds: number = 0;
   private currentTimeRemaining: number = 0;
 
   constructor(private dev: boolean) {}
@@ -53,11 +53,11 @@ export class WindowManager {
     this.kioskWindow.loadURL(this.getRendererUrl());
   }
 
-  unlockKiosk(token: string, sessionId: string, balanceCents: number, timeRemaining: number) {
+  unlockKiosk(token: string, sessionId: string, balanceSeconds: number, timeRemaining: number) {
     if (!this.kioskWindow) return;
     this.currentToken = token;
     this.currentSessionId = sessionId;
-    this.currentBalanceCents = balanceCents ?? 0;
+    this.currentBalanceSeconds = balanceSeconds ?? 0;
     this.currentTimeRemaining = timeRemaining ?? 0;
     this.kioskWindow.setKiosk(false);
     this.kioskWindow.minimize();
@@ -107,7 +107,7 @@ export class WindowManager {
 
     this.overlayWindow.webContents.once('did-finish-load', () => {
       this.overlayWindow?.webContents.send('balance_update', {
-        balance_cents: this.currentBalanceCents,
+        balance_seconds: this.currentBalanceSeconds,
         time_remaining_seconds: this.currentTimeRemaining,
         session_id: this.currentSessionId,
       });

@@ -13,7 +13,7 @@ export function KioskApp() {
     if (!window.electronAPI) return;
 
     window.electronAPI.onBalanceUpdate((data) => {
-      updateBalance(data.balance_cents, data.time_remaining_seconds);
+      updateBalance(data.balance_seconds, data.time_remaining_seconds);
     });
 
     window.electronAPI.onWarning((data) => {

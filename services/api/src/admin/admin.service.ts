@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { SessionsGateway } from '../sessions/sessions.gateway';
+
+const BARBERSHOP_BONUS_SECONDS = 300; // 5 minutes
 
 @Injectable()
 export class AdminService {
@@ -43,26 +45,58 @@ export class AdminService {
     return this.prisma.user.update({ where: { id: user.id }, data: { name } });
   }
 
-  async addCredit(phone: string, amount_cents: number) {
+  async addCredit(phone: string, balance_seconds: number) {
     const user = await this.usersService.findOrCreate(phone);
 
     await this.prisma.$transaction([
       this.prisma.payment.create({
         data: {
           user_id: user.id,
-          amount_cents,
+          amount_cents: 0,
+          balance_seconds,
           status: 'paid',
           source: 'admin',
         },
       }),
       this.prisma.user.update({
         where: { id: user.id },
-        data: { balance_cents: { increment: amount_cents } },
+        data: { balance_seconds: { increment: balance_seconds } },
       }),
     ]);
 
     const updatedUser = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
-    this.gateway.emitPaymentConfirmed(user.id, updatedUser.balance_cents);
+    this.gateway.emitPaymentConfirmed(user.id, updatedUser.balance_seconds);
+    return updatedUser;
+  }
+
+  async grantBarbershopBonus(phone: string) {
+    const user = await this.usersService.findOrCreate(phone);
+
+    if (user.barbershop_bonus_granted) {
+      throw new BadRequestException('Bônus do primeiro corte já foi concedido para este usuário.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.payment.create({
+        data: {
+          user_id: user.id,
+          amount_cents: 0,
+          balance_seconds: BARBERSHOP_BONUS_SECONDS,
+          status: 'paid',
+          source: 'admin',
+        },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          balance_seconds: { increment: BARBERSHOP_BONUS_SECONDS },
+          barbershop_bonus_granted: true,
+        },
+      }),
+    ]);
+
+    const updatedUser = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    this.gateway.emitPaymentConfirmed(user.id, updatedUser.balance_seconds);
     return updatedUser;
   }
 
@@ -89,7 +123,7 @@ export class AdminService {
     return this.prisma.payment.findMany({
       where: { user_id: user.id, status: 'paid' },
       orderBy: { created_at: 'desc' },
-      select: { id: true, amount_cents: true, source: true, created_at: true },
+      select: { id: true, amount_cents: true, balance_seconds: true, source: true, created_at: true },
     });
   }
 
@@ -119,59 +153,59 @@ export class AdminService {
       include: { user: { select: { phone: true, name: true } } },
       orderBy: { created_at: 'asc' },
     });
-    const adminTotal = adminCredits.reduce((s: number, p: { amount_cents: number }) => s + p.amount_cents, 0);
+    const adminTotal = adminCredits.reduce((s: number, p: { balance_seconds: number | null }) => s + (p.balance_seconds ?? 0), 0);
 
     // Group by (user_id, ISO week) and calculate weekly excess
     const weeklyMap = new Map<string, { total: number; phone: string; name: string | null }>();
     for (const credit of adminCredits) {
       const key = `${credit.user_id}::${getISOWeekKey(credit.created_at)}`;
       const existing = weeklyMap.get(key);
+      const seconds = credit.balance_seconds ?? 0;
       if (existing) {
-        existing.total += credit.amount_cents;
+        existing.total += seconds;
       } else {
         weeklyMap.set(key, {
-          total: credit.amount_cents,
+          total: seconds,
           phone: credit.user.phone,
           name: credit.user.name,
         });
       }
     }
 
-    const WEEKLY_BONUS_LIMIT = 1000; // R$10
+    const WEEKLY_BONUS_LIMIT_SECONDS = 300; // 5 min
     let adminExcess = 0;
     const excessDetails: {
       user_phone: string; user_name: string | null;
-      semana: string; total_cents: number; bonus_cents: number; excesso_cents: number;
+      semana: string; total_seconds: number; bonus_seconds: number; excesso_seconds: number;
     }[] = [];
 
     for (const [key, data] of weeklyMap) {
       const semana = key.split('::')[1];
-      const excesso = Math.max(0, data.total - WEEKLY_BONUS_LIMIT);
+      const excesso = Math.max(0, data.total - WEEKLY_BONUS_LIMIT_SECONDS);
       if (excesso > 0) {
         adminExcess += excesso;
         excessDetails.push({
           user_phone: data.phone,
           user_name: data.name,
           semana,
-          total_cents: data.total,
-          bonus_cents: WEEKLY_BONUS_LIMIT,
-          excesso_cents: excesso,
+          total_seconds: data.total,
+          bonus_seconds: WEEKLY_BONUS_LIMIT_SECONDS,
+          excesso_seconds: excesso,
         });
       }
     }
     excessDetails.sort((a, b) => a.semana.localeCompare(b.semana));
 
     const manutencao = Math.round(pixRevenue * 0.20);
-    const barbearia = Math.max(0, Math.round(pixRevenue * 0.20) - adminExcess);
+    const barbearia = Math.round(pixRevenue * 0.20);
     const vinicius = Math.round(pixRevenue * 0.30);
     const marcos = Math.round(pixRevenue * 0.30);
 
     return {
       month,
       pix_revenue_cents: pixRevenue,
-      admin_total_cents: adminTotal,
-      admin_bonus_cents: adminTotal - adminExcess,
-      admin_excess_cents: adminExcess,
+      admin_total_seconds: adminTotal,
+      admin_excess_seconds: adminExcess,
       distribuicao: { manutencao_cents: manutencao, barbearia_cents: barbearia, vinicius_cents: vinicius, marcos_cents: marcos },
       excess_details: excessDetails,
     };

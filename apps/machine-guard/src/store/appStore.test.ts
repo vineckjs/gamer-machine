@@ -17,7 +17,7 @@ beforeEach(() => {
 describe('appStore', () => {
   describe('setAuth', () => {
     it('sets accessToken, user, and transitions screen to DASHBOARD', () => {
-      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
+      const user = { id: 'user-1', phone: '11999999999', balance_seconds: 300, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
       useAppStore.getState().setAuth('jwt-token', user);
 
       const state = useAppStore.getState();
@@ -28,14 +28,14 @@ describe('appStore', () => {
   });
 
   describe('updateBalance', () => {
-    it('updates balance_cents on user and sets timeRemainingSeconds', () => {
-      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
+    it('updates balance_seconds on user and sets timeRemainingSeconds', () => {
+      const user = { id: 'user-1', phone: '11999999999', balance_seconds: 300, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
       useAppStore.setState({ user });
 
-      useAppStore.getState().updateBalance(300, 90);
+      useAppStore.getState().updateBalance(180, 90);
 
       const state = useAppStore.getState();
-      expect(state.user?.balance_cents).toBe(300);
+      expect(state.user?.balance_seconds).toBe(180);
       expect(state.timeRemainingSeconds).toBe(90);
     });
 
@@ -49,19 +49,19 @@ describe('appStore', () => {
   });
 
   describe('setBalance', () => {
-    it('updates only balance_cents without touching timeRemainingSeconds', () => {
-      const user = { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
+    it('updates only balance_seconds without touching timeRemainingSeconds', () => {
+      const user = { id: 'user-1', phone: '11999999999', balance_seconds: 300, name: null, email: null, cpf: null, email_verified: false, profile_locked: false };
       useAppStore.setState({ user, timeRemainingSeconds: 120 });
 
-      useAppStore.getState().setBalance(1000);
+      useAppStore.getState().setBalance(900);
 
       const state = useAppStore.getState();
-      expect(state.user?.balance_cents).toBe(1000);
+      expect(state.user?.balance_seconds).toBe(900);
       expect(state.timeRemainingSeconds).toBe(120); // unchanged
     });
 
     it('does not crash when user is null', () => {
-      useAppStore.getState().setBalance(1000);
+      useAppStore.getState().setBalance(900);
       expect(useAppStore.getState().user).toBeNull();
     });
   });
@@ -85,7 +85,7 @@ describe('appStore', () => {
         screen: 'PLAYING',
         phone: '11999999999',
         accessToken: 'jwt-token',
-        user: { id: 'user-1', phone: '11999999999', balance_cents: 500, name: null, email: null, cpf: null, email_verified: false, profile_locked: false },
+        user: { id: 'user-1', phone: '11999999999', balance_seconds: 300, name: null, email: null, cpf: null, email_verified: false, profile_locked: false },
         sessionId: 'session-1',
         overlayState: 'WARNING_30SEC',
         timeRemainingSeconds: 45,

@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { SessionsGateway } from '../sessions/sessions.gateway';
 
+const PROFILE_BONUS_SECONDS = 300; // 5 minutes
+
 export function validateCPF(raw: string): boolean {
   const d = raw.replace(/\D/g, '');
   if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
@@ -42,9 +44,9 @@ export class UsersService {
   async getBalance(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { balance_cents: true },
+      select: { balance_seconds: true },
     });
-    return user?.balance_cents ?? 0;
+    return user?.balance_seconds ?? 0;
   }
 
   async updateProfile(userId: string, data: { name: string; email: string; cpf: string }) {
@@ -139,12 +141,18 @@ export class UsersService {
     if (profileComplete && !user.profile_bonus_granted) {
       await this.prisma.$transaction([
         this.prisma.payment.create({
-          data: { user_id: userId, amount_cents: 1000, status: 'paid', source: 'admin' },
+          data: {
+            user_id: userId,
+            amount_cents: 0,
+            balance_seconds: PROFILE_BONUS_SECONDS,
+            status: 'paid',
+            source: 'admin',
+          },
         }),
         this.prisma.user.update({
           where: { id: userId },
           data: {
-            balance_cents: { increment: 1000 },
+            balance_seconds: { increment: PROFILE_BONUS_SECONDS },
             profile_bonus_granted: true,
             profile_locked: true,
           },
@@ -152,7 +160,7 @@ export class UsersService {
       ]);
 
       updatedUser = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-      this.gateway.emitPaymentConfirmed(userId, updatedUser.balance_cents);
+      this.gateway.emitPaymentConfirmed(userId, updatedUser.balance_seconds);
     }
 
     return updatedUser;

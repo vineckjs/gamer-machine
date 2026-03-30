@@ -59,7 +59,7 @@ describe('PaymentsService', () => {
       (abacatePay.createPixBilling as jest.Mock).mockResolvedValue(pixData);
       (prisma.payment.create as jest.Mock).mockResolvedValue(mockPayment);
 
-      const result = await service.createPix('user-1', 500);
+      const result = await service.createPix('user-1', 'pack_5min');
 
       expect(result.payment.abacatepay_id).toBe('abacate-123');
       expect(prisma.payment.create).toHaveBeenCalledWith({

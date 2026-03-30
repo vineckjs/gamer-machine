@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AdminUser, Deposit, SessionRecord, addCredit, getActiveOtp, getDeposits, getSessions, getUser, updateUser } from '../api';
+import { AdminUser, Deposit, SessionRecord, addCredit, getActiveOtp, getDeposits, getSessions, getUser, grantBarbershopBonus, updateUser } from '../api';
 
 function fmtMoney(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -34,10 +34,20 @@ export default function UserDetailPage() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
 
-  const [amountInput, setAmountInput] = useState('10');
+  // minutes input for credit (converted to seconds on submit)
+  const [minutesInput, setMinutesInput] = useState('5');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Confirmation modal for credit when bonus already granted
+  const [showCreditConfirm, setShowCreditConfirm] = useState(false);
+  const [pendingMinutes, setPendingMinutes] = useState(0);
+
+  // Barbershop bonus
+  const [bonusLoading, setBonusLoading] = useState(false);
+  const [bonusError, setBonusError] = useState('');
+  const [bonusSuccess, setBonusSuccess] = useState('');
 
   function loadHistory(p: string) {
     getDeposits(p).then(setDeposits).catch(() => {});
@@ -74,24 +84,57 @@ export default function UserDetailPage() {
     }
   }
 
-  async function handleAddCredit(e: FormEvent) {
-    e.preventDefault();
+  async function doAddCredit(minutes: number) {
+    setLoading(true);
     setError('');
     setSuccess('');
-    const amount = parseFloat(amountInput);
-    if (isNaN(amount) || amount <= 0) { setError('Valor inválido'); return; }
-    setLoading(true);
     try {
-      await addCredit(phone, Math.round(amount * 100));
-      const updated = await getUser(phone);
+      const updated = await addCredit(phone, minutes * 60);
       setUser(updated);
       setNotFound(false);
       loadHistory(phone);
-      setSuccess(`Crédito de R$ ${amount.toFixed(2).replace('.', ',')} adicionado com sucesso!`);
+      setSuccess(`${minutes} min adicionados com sucesso!`);
     } catch (err: any) {
       setError(err.message ?? 'Erro ao adicionar crédito');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAddCredit(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    const minutes = parseFloat(minutesInput);
+    if (isNaN(minutes) || minutes <= 0) { setError('Valor inválido'); return; }
+
+    if (user?.barbershop_bonus_granted) {
+      setPendingMinutes(minutes);
+      setShowCreditConfirm(true);
+    } else {
+      await doAddCredit(minutes);
+    }
+  }
+
+  async function handleConfirmCredit() {
+    setShowCreditConfirm(false);
+    await doAddCredit(pendingMinutes);
+  }
+
+  async function handleGrantBarbershopBonus() {
+    setBonusError('');
+    setBonusSuccess('');
+    setBonusLoading(true);
+    try {
+      const updated = await grantBarbershopBonus(phone);
+      setUser(updated);
+      setNotFound(false);
+      loadHistory(phone);
+      setBonusSuccess('Bônus de 5 minutos concedido com sucesso!');
+    } catch (err: any) {
+      setBonusError(err.message ?? 'Erro ao conceder bônus');
+    } finally {
+      setBonusLoading(false);
     }
   }
 
@@ -108,11 +151,37 @@ export default function UserDetailPage() {
     }
   }
 
-  const balance = user?.balance_cents ?? 0;
+  const balanceSeconds = user?.balance_seconds ?? 0;
   const hasName = (user?.name ?? nameInput.trim()).length >= 2;
 
   return (
     <div className="min-h-screen p-6 max-w-lg mx-auto">
+      {/* Confirmation modal */}
+      {showCreditConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-900 text-lg mb-3">⚠️ Atenção</h3>
+            <p className="text-gray-700 text-sm mb-6">
+              Este usuário já recebeu o bônus do primeiro corte. Este valor deverá ser cobrado do cliente. Deseja prosseguir com a recarga?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCreditConfirm(false)}
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-50 font-semibold text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmCredit}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg px-4 py-2 text-sm"
+              >
+                Sim, prosseguir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={() => navigate('/')}
         className="text-blue-600 hover:text-blue-800 mb-6 flex items-center gap-1 text-sm"
@@ -143,7 +212,7 @@ export default function UserDetailPage() {
         </div>
 
         <p className="text-gray-500 text-sm mb-1">Saldo atual</p>
-        <p className="text-3xl font-bold text-green-600 mb-6">{fmtMoney(balance)}</p>
+        <p className="text-3xl font-bold text-green-600 mb-6">{fmtDuration(balanceSeconds)}</p>
 
         {notFound && (
           <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-4">
@@ -151,16 +220,40 @@ export default function UserDetailPage() {
           </p>
         )}
 
-        {/* Adicionar crédito — bloqueado sem nome */}
+        {/* Bônus primeiro corte */}
+        <div className="border border-gray-200 rounded-xl p-4 mb-6">
+          <h3 className="font-semibold text-gray-800 mb-2 text-sm">Bônus Primeiro Corte</h3>
+          <p className="text-gray-500 text-xs mb-3">Concede 5 minutos gratuitos. Válido apenas uma vez por cliente.</p>
+          {bonusSuccess && <p className="text-green-600 text-sm mb-2">{bonusSuccess}</p>}
+          {bonusError && <p className="text-red-500 text-sm mb-2">{bonusError}</p>}
+          {user?.barbershop_bonus_granted ? (
+            <button
+              disabled
+              className="w-full bg-gray-200 text-gray-500 font-semibold rounded-lg px-4 py-2 text-sm cursor-not-allowed"
+            >
+              Bônus já concedido ✓
+            </button>
+          ) : (
+            <button
+              onClick={handleGrantBarbershopBonus}
+              disabled={bonusLoading || !hasName}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
+            >
+              {bonusLoading ? 'Concedendo...' : '🎁 Dar Bônus Primeiro Corte (5 min)'}
+            </button>
+          )}
+        </div>
+
+        {/* Adicionar crédito */}
         <form onSubmit={handleAddCredit} className="flex flex-col gap-4">
           <div>
-            <label className="text-sm text-gray-600 mb-1 block">Valor a adicionar (R$)</label>
+            <label className="text-sm text-gray-600 mb-1 block">Adicionar tempo (minutos)</label>
             <input
               type="number"
-              min="0.01"
-              step="0.01"
-              value={amountInput}
-              onChange={e => setAmountInput(e.target.value)}
+              min="1"
+              step="1"
+              value={minutesInput}
+              onChange={e => setMinutesInput(e.target.value)}
               disabled={!hasName}
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
@@ -170,7 +263,7 @@ export default function UserDetailPage() {
           <button
             type="submit"
             disabled={loading || !hasName}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg px-4 py-2 transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg px-4 py-2 transition-colors"
             title={!hasName ? 'Preencha o nome do cliente primeiro' : undefined}
           >
             {loading ? 'Adicionando...' : 'Adicionar Crédito'}
@@ -222,7 +315,14 @@ export default function UserDetailPage() {
                     </span>
                     <span className="text-gray-500">{fmtDate(d.created_at)}</span>
                   </div>
-                  <span className="font-semibold text-green-600">+{fmtMoney(d.amount_cents)}</span>
+                  <div className="text-right">
+                    {d.balance_seconds != null && (
+                      <span className="font-semibold text-green-600">+{fmtDuration(d.balance_seconds)}</span>
+                    )}
+                    {d.source === 'pix' && (
+                      <span className="block text-xs text-gray-400">{fmtMoney(d.amount_cents)}</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -244,7 +344,7 @@ export default function UserDetailPage() {
                     <p className="text-gray-700">{fmtDate(s.started_at)}</p>
                     <p className="text-gray-400 text-xs">{fmtDuration(s.duration_seconds)}</p>
                   </div>
-                  <span className="font-semibold text-red-500">-{fmtMoney(s.cost_cents)}</span>
+                  <span className="font-semibold text-red-500">-{fmtDuration(s.duration_seconds)}</span>
                 </div>
               ))}
             </div>

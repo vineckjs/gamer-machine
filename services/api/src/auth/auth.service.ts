@@ -56,7 +56,7 @@ export class AuthService {
         id: user.id,
         phone: user.phone,
         name: user.name ?? null,
-        balance_cents: user.balance_cents,
+        balance_seconds: user.balance_seconds,
         email: user.email ?? null,
         cpf: user.cpf ?? null,
         email_verified: user.email_verified,

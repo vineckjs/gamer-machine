@@ -1,12 +1,12 @@
 import { Controller, Post, Body, Headers, UseGuards, Request, ForbiddenException } from '@nestjs/common';
-import { IsInt, Min } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
 
 class CreatePixDto {
-  @IsInt()
-  @Min(100)
-  amount_cents!: number;
+  @IsString()
+  @IsNotEmpty()
+  package_id!: string;
 }
 
 @Controller('payments')
@@ -16,7 +16,7 @@ export class PaymentsController {
   @Post('create-pix')
   @UseGuards(JwtAuthGuard)
   createPix(@Request() req: any, @Body() dto: CreatePixDto) {
-    return this.paymentsService.createPix(req.user.userId, dto.amount_cents);
+    return this.paymentsService.createPix(req.user.userId, dto.package_id);
   }
 
   @Post('webhook')

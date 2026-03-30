@@ -31,6 +31,9 @@ export default defineConfig({
     open: false,
   },
   resolve: {
-    alias: { '@': resolve(__dirname, './src') },
+    alias: {
+      '@': resolve(__dirname, './src'),
+      '@gamer-machine/shared': resolve(__dirname, '../../packages/shared/src/index.ts'),
+    },
   },
 });

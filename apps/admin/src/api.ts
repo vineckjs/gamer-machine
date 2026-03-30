@@ -4,13 +4,15 @@ export interface AdminUser {
   id: string;
   phone: string;
   name: string | null;
-  balance_cents: number;
+  balance_seconds: number;
+  barbershop_bonus_granted: boolean;
   created_at: string;
 }
 
 export interface Deposit {
   id: string;
   amount_cents: number;
+  balance_seconds: number | null;
   source: 'pix' | 'admin';
   created_at: string;
 }
@@ -95,14 +97,27 @@ export async function updateUser(phone: string, name: string): Promise<AdminUser
   return res.json();
 }
 
-export async function addCredit(phone: string, amountCents: number): Promise<AdminUser> {
+export async function addCredit(phone: string, balanceSeconds: number): Promise<AdminUser> {
   const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(phone)}/credit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ amount_cents: amountCents }),
+    body: JSON.stringify({ balance_seconds: balanceSeconds }),
   });
   if (res.status === 401) { clearToken(); throw new Error('Sessão expirada'); }
   if (!res.ok) throw new Error('Erro ao adicionar crédito');
+  return res.json();
+}
+
+export async function grantBarbershopBonus(phone: string): Promise<AdminUser> {
+  const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(phone)}/barbershop-bonus`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (res.status === 401) { clearToken(); throw new Error('Sessão expirada'); }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as any).message ?? 'Erro ao conceder bônus');
+  }
   return res.json();
 }
 
@@ -129,17 +144,16 @@ export interface ExcessDetail {
   user_phone: string;
   user_name: string | null;
   semana: string;
-  total_cents: number;
-  bonus_cents: number;
-  excesso_cents: number;
+  total_seconds: number;
+  bonus_seconds: number;
+  excesso_seconds: number;
 }
 
 export interface MonthlyReport {
   month: string;
   pix_revenue_cents: number;
-  admin_total_cents: number;
-  admin_bonus_cents: number;
-  admin_excess_cents: number;
+  admin_total_seconds: number;
+  admin_excess_seconds: number;
   distribuicao: {
     manutencao_cents: number;
     barbearia_cents: number;

@@ -51,7 +51,7 @@ export class SessionsGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.server.to(`user:${userId}`).emit('warning', data);
   }
 
-  emitPaymentConfirmed(userId: string, balanceCents: number) {
-    this.server.to(`user:${userId}`).emit('payment_confirmed', { balance_cents: balanceCents });
+  emitPaymentConfirmed(userId: string, balanceSeconds: number) {
+    this.server.to(`user:${userId}`).emit('payment_confirmed', { balance_seconds: balanceSeconds });
   }
 }

@@ -20,6 +20,25 @@
     "socket.io-client": "^4.7.5",
     "qrcode.react": "^3.1.0"
   },
+  "build": {
+    "appId": "com.gamer-machine.machine-guard",
+    "productName": "Machine Guard",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@vitest/ui": "^1.0.0",
