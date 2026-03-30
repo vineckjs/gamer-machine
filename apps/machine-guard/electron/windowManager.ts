@@ -51,6 +51,20 @@ export class WindowManager {
     });
 
     this.kioskWindow.loadURL(this.getRendererUrl());
+
+    if (!this.dev) {
+      // Block Alt+F4: prevent the close event from destroying the window
+      this.kioskWindow.on('close', (event) => {
+        event.preventDefault();
+      });
+
+      // Block Alt+Tab: immediately recapture focus when the window loses it
+      this.kioskWindow.on('blur', () => {
+        if (this.kioskWindow && !this.kioskWindow.isDestroyed()) {
+          this.kioskWindow.focus();
+        }
+      });
+    }
   }
 
   unlockKiosk(token: string, sessionId: string, balanceSeconds: number, timeRemaining: number) {
