@@ -124,6 +124,10 @@ export default function UserDetailPage() {
   async function handleGrantBarbershopBonus() {
     setBonusError('');
     setBonusSuccess('');
+    if (!hasName) {
+      setBonusError('Informe o nome do cliente antes de conceder o bônus.');
+      return;
+    }
     setBonusLoading(true);
     try {
       const updated = await grantBarbershopBonus(phone);
@@ -236,7 +240,7 @@ export default function UserDetailPage() {
           ) : (
             <button
               onClick={handleGrantBarbershopBonus}
-              disabled={bonusLoading || !hasName}
+              disabled={bonusLoading}
               className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
             >
               {bonusLoading ? 'Concedendo...' : '🎁 Dar Bônus Primeiro Corte (5 min)'}
